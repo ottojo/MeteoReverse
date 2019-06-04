@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeteoCore", "MeteoCore\MeteoCore.csproj", "{D6988E8C-A230-4C6A-A1C8-D5BC36F55E7C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeteoTest", "MeteoTest\MeteoTest.csproj", "{E29E49AB-F101-4B68-8B1D-E801E914A9DB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D6988E8C-A230-4C6A-A1C8-D5BC36F55E7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6988E8C-A230-4C6A-A1C8-D5BC36F55E7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6988E8C-A230-4C6A-A1C8-D5BC36F55E7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6988E8C-A230-4C6A-A1C8-D5BC36F55E7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E29E49AB-F101-4B68-8B1D-E801E914A9DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E29E49AB-F101-4B68-8B1D-E801E914A9DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E29E49AB-F101-4B68-8B1D-E801E914A9DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E29E49AB-F101-4B68-8B1D-E801E914A9DB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
