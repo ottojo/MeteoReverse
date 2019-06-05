@@ -45,7 +45,7 @@ namespace MeteoOriginal
         /// <summary>
         ///     bit pattern for 0D,0E from 0B-0D
         /// </summary>
-        private readonly uint[] mUintArrBitPattern12 = Secrets.expandRTable;
+        private static readonly uint[] mUintArrBitPattern12 = Secrets.expandRTable;
 
         /// <summary>
         ///     12-15 from 16-19 (time)
@@ -255,18 +255,24 @@ namespace MeteoOriginal
             }
         }
 
-        private void ExpandR(ref DataContainer container)
+        public static ByteUInt ExpandR(ByteUInt R)
         {
             uint tmp;
 
-            container.R.FullUint &= 0x000FFFFF; // clear 0D(4-7),0E
+            Console.Write("{ " + R.FullUint + ", ");
+
+            R.FullUint &= 0x000FFFFF; // clear 0D(4-7),0E
             tmp = 0x00100000; // and set bits form 0B-0D(0-3)
             for (var i = 0; i < 12; i++)
             {
-                if ((container.R.FullUint & mUintArrBitPattern12[i]) != 0)
-                    container.R.FullUint |= tmp;
+                if ((R.FullUint & mUintArrBitPattern12[i]) != 0)
+                    R.FullUint |= tmp;
                 tmp <<= 1;
             }
+
+            Console.WriteLine(R.FullUint + "},");
+
+            return R;
         }
 
         private void CompressKey(ref DataContainer container)
@@ -384,7 +390,7 @@ namespace MeteoOriginal
             for (var i = 16; i > 0; i--)
             {
                 ShiftTimeRight(i, ref container);
-                ExpandR(ref container);
+                container.R = ExpandR(container.R);
                 CompressKey(ref container);
 
                 // expR XOR compr.Key

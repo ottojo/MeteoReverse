@@ -64,5 +64,15 @@ namespace MeteoTest
                 Assert.AreEqual(expected.timeL, d.timeL);
             }
         }
+
+        [TestMethod]
+        public void TestOriginalExpandR()
+        {
+            for (int i = 0; i < TestData.ExpandRData.GetLength(0); i++)
+            {
+                OriginalDeEnCoder.ByteUInt b = new OriginalDeEnCoder.ByteUInt {FullUint = TestData.ExpandRData[i, 0]};
+                Assert.AreEqual(TestData.ExpandRData[i, 1], OriginalDeEnCoder.ExpandR(b).FullUint);
+            }
+        }
     }
 }

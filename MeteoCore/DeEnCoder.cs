@@ -329,12 +329,12 @@ namespace MeteoSolution
         /// <summary>
         ///    expands R from 20 to 30 bit
         /// </summary>
-        private void ExpandR(ref DataContainer container)
+        public static ByteUInt ExpandR(ByteUInt R)
         {
             uint tmp;
 
             // Use only lower 20 bit (clear previous expansion?)
-            container.R.FullUint &= 0x000FFFFF; // clear 0D(4-7),0E
+            R.FullUint &= 0x000FFFFF; // clear 0D(4-7),0E
 
             // Set bits right to left, starting here:
             tmp = 0x00100000; // and set bits form 0B-0D(0-3)
@@ -343,10 +343,12 @@ namespace MeteoSolution
                 // last 2 elements in array are 0?
                 // -> makes sense, need 10 new bits to expand from 20 to 30
                 // why iteration until 12 and not 10?
-                if ((container.R.FullUint & expandRTable[i]) != 0)
-                    container.R.FullUint |= tmp;
+                if ((R.FullUint & expandRTable[i]) != 0)
+                    R.FullUint |= tmp;
                 tmp <<= 1;
             }
+
+            return R;
         }
 
         /// <summary>
@@ -366,6 +368,7 @@ namespace MeteoSolution
                     L_.FullUint |= tmp;
                 tmp <<= 1;
             }
+
             return L_;
         }
 
@@ -404,7 +407,7 @@ namespace MeteoSolution
             for (var round = 16; round > 0; round--)
             {
                 ShiftTimeRight(round, ref container);
-                ExpandR(ref container);
+                container.R = ExpandR(container.R);
                 // L' = CompressKey
                 container.L_ = CompressKey(container.timeH, container.timeL);
 
