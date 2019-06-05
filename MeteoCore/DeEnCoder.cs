@@ -369,10 +369,9 @@ namespace MeteoSolution
             return L_;
         }
 
-        private ByteUInt Pbox(ByteUInt sBoxResult)
+        public static ByteUInt Pbox(ByteUInt sBoxResult)
         {
-            ByteUInt r = new ByteUInt {FullUint = 0};
-
+            ByteUInt r = new ByteUInt {FullUint = 0xFF000000};
             uint tmp = 0x00000001;
             for (var i = 0; i < 20; i++)
             {
