@@ -15,7 +15,7 @@ namespace MeteoSolution
         ///     Container zum Konvertieren zwischen 4 Bytes und Uint.
         /// </summary>
         [StructLayout(LayoutKind.Explicit)]
-        private struct ByteUInt
+        public struct ByteUInt
         {
             // O: least significant byte
             [FieldOffset(0)] public byte Byte0;
@@ -84,21 +84,21 @@ namespace MeteoSolution
         /// <summary>
         ///     bit pattern for 12-15 from 16-19 (1/3)
         /// </summary>
-        private readonly byte[] sTable1 =
+        private static readonly byte[] sTable1 =
         {
         };
 
         /// <summary>
         ///     bit pattern for 12-15 from 16-19 (2/3)
         /// </summary>
-        private readonly byte[] sTable2 =
+        private static readonly byte[] sTable2 =
         {
         };
 
         /// <summary>
         ///     bit pattern for 12-15 from 16-19 (3/3)
         /// </summary>
-        private readonly byte[] sTable3 =
+        private static readonly byte[] sTable3 =
         {
         };
 
@@ -181,6 +181,86 @@ namespace MeteoSolution
         #endregion
 
         #region Private Methoden
+
+        /// <summary>
+        /// This arranges 30 bits into 5 6-bit-groups for use with S-Box.
+        /// Every third 2-bit-group comes the bits 20 to 30.
+        /// </summary>
+        public static uint build6bitGroups(uint input)
+        {
+            Console.WriteLine("S Box building 6-bit-blocks from input data.");
+            uint output = 0;
+            int lowIndex = 0;
+            int highIndex = 20;
+            for (int i = 0; i < 30; i++)
+            {
+                if ((i + 1) % 6 == 0 || (i + 2) % 6 == 0)
+                {
+                    // Console.WriteLine("Getting bit " + i + " from " + highIndex);
+                    output |= ((input >> highIndex) & 0b1) << i;
+                    highIndex++;
+                }
+                else
+                {
+                    // Console.WriteLine("Getting bit " + i + " from " + lowIndex);
+                    output |= ((input >> lowIndex) & 0b1) << i;
+                    lowIndex++;
+                }
+            }
+
+            // char[] r = Convert.ToString(output, 2).PadLeft(30, '0').ToCharArray();
+            // Console.WriteLine("Done: " + new string(r));
+            return output;
+        }
+
+        /// <summary>
+        /// Applies substitution to data.
+        /// S5 is applied to the lowest 6 bit and so on.
+        /// The result of S5 is NOT stored in the lowest 4 bit in the result.
+        /// The order of the resulting 4-bit segments seems arbitrarily chosen.
+        /// The substitution table contains bytes, S4 and S2 use the highest 4 bits.
+        /// </summary>
+        /// <returns>Substituted and rearranged data (20bit)</returns>
+        public static uint Sbox(uint groups6bit)
+        {
+            uint output = 0;
+            // S5 (store at offset 12)
+            output |= (uint) ((sTable1[groups6bit & 0x3F] & 0xF) << 12);
+
+            // S4 Use bits 3 to 7 here (store at offset 16)
+            output |= (uint) ((sTable1[(groups6bit >> 6) & 0x3F] & 0xF0) << 12);
+
+            // S3 (store at offset 4)
+            output |= (uint) ((sTable2[(groups6bit >> 12) & 0x3F] & 0xF) << 4);
+
+            // S2 Use bits 3 to 7 here (store at offset 8)
+            output |= (uint) ((sTable2[(groups6bit >> 18) & 0x3F] & 0xF0) << 4);
+
+            // S1 (store at offset 0)
+            output |= (uint) (sTable3[(groups6bit >> 24) & 0x3F] & 0xF);
+
+            return output;
+        }
+
+        /// <summary>
+        /// Applies the S-Box.
+        /// Result is strangely formatted, this is just for interoperability with existing code.
+        /// The goal is to eliminate this function.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns>Result of S-Box with a gap in the Data from bits 4 to 7</returns>
+        public static ByteUInt formattedSbox(ByteUInt input)
+        {
+            uint g6 = build6bitGroups(input.FullUint);
+            uint s = Sbox(g6);
+            ByteUInt r = new ByteUInt();
+            r.FullUint = s;
+            r.FullUint <<= 4;
+            r.FullUint &= 0xFFFFFF0F;
+            r.FullUint |= s & 0xF;
+            return r;
+        }
+
 
         /// <summary>
         ///     Ermittelt Wetterdaten aus den entschlüsselten Bytes und prüft auf Korrektheit.
@@ -296,135 +376,40 @@ namespace MeteoSolution
         /// <summary>
         /// Compress 40 bit time to 30 bit key (stored in L')
         /// </summary>
-        /// <param name="container"></param>
-        private void CompressKey(ref DataContainer container)
+        private ByteUInt CompressKey(byte timeH, uint timeL)
         {
+            ByteUInt L_ = new ByteUInt();
             uint tmp;
 
-            container.L_.FullUint = 0; // clear 12-15
+            L_.FullUint = 0; // clear 12-15
             tmp = 0x00000001; // and set bits from 16-1A (time)
             for (var i = 0; i < 30; i++)
             {
-                if ((container.timeL & timeCompression1[i]) != 0 ||
-                    (container.timeH & timeCompression2[i]) != 0)
-                    container.L_.FullUint |= tmp;
+                if ((timeL & timeCompression1[i]) != 0 ||
+                    (timeH & timeCompression2[i]) != 0)
+                    L_.FullUint |= tmp;
                 tmp <<= 1;
             }
+            return L_;
         }
 
-        private void DoSbox(ref DataContainer container)
+        private ByteUInt Pbox(ByteUInt sBoxResult)
         {
-            byte helper; //mByteR1B;
+            ByteUInt r = new ByteUInt {FullUint = 0};
 
-            helper = container.L_.Byte3; // R1B = R15;
-            container.L_.Byte3 = container.L_.Byte2; // R15 = R14
-
-            // 5 S-Boxen (Each 6 -> 4 bit)
-            for (var i = 5; i > 0; i--)
-            {
-                if (i == 2 || i == 4) // round 4,2
-                {
-                    byte tmpNew;
-                    // Swap left and right half of last byte in L'
-                    tmpNew = (byte) (container.L_.Byte0 >> 4);
-                    tmpNew |= (byte) ((container.L_.Byte0 & 0x0f) << 4);
-                    container.L_.Byte0 = tmpNew;
-                }
-
-                byte roundResult;
-
-                container.L_.Byte3 &= 0xF0; // Reset lowest 4 bit in L_3
-                roundResult = (byte) ((container.L_.Byte0 & 0x0F) | container.L_.Byte3);
-
-
-                // Substitution? last 4 in L_0 + highest 4 in L_3 (previously set to L_2) -> table[tmp]?
-                // 0x3F: last 6 bit set
-                // Round 4,5
-                if (i == 4 || i == 5)
-                {
-                    roundResult = sTable1[roundResult & 0x3F];
-                }
-
-                // Round 2, 3
-                if (i == 2 || i == 3)
-                {
-                    roundResult = sTable2[roundResult & 0x3F];
-                }
-
-                // Round 1
-                else if (i == 1)
-                {
-                    roundResult = sTable3[roundResult & 0x3F];
-                }
-
-                // done substituting roundResult
-
-                if ((i & 1) != 0)
-                {
-                    // Rounds 5, 3, 1: write lowest 4 bits of tmp to B0
-                    container.sBoxResult.Byte0 = (byte) (roundResult & 0x0F);
-                }
-                else
-                {
-                    // Rounds 4, 2: write hightest 4 bits of tmp to B0
-                    container.sBoxResult.Byte0 |= (byte) (roundResult & 0xF0);
-                }
-
-                if ((i & 1) == 0) // copy 14->13->12, 1C->1E->1D
-                {
-                    // Rounds 4, 2:
-                    // Rotate L' right, keep highest byte
-                    byte tmpByte3 = container.L_.Byte3;
-                    tmpByte3 = container.L_.Byte3;
-                    container.L_.FullUint >>= 8;
-                    container.L_.Byte3 = tmpByte3;
-
-                    // shift this left
-                    container.sBoxResult.FullUint <<= 8;
-                }
-
-                // ROTATE L'3 (not shift, rotate!)
-                // TODO help is original B3, but B3 is now B2. This does not
-                //  rotate correctly?
-
-                // shift B3 (old B2) right, but fill with old B3
-                container.L_.Byte3 >>= 1; // rotate R1B>R15 twice
-
-                if ((helper & 1) != 0)
-                {
-                }
-
-                helper >>= 1;
-
-                // ROTATE L'3 (not shift, rotate!)
-                container.L_.Byte3 >>= 1;
-                if ((helper & 1) != 0)
-                {
-                    container.L_.Byte3 |= 0x80;
-                }
-
-                helper >>= 1;
-            }
-        }
-
-        /// <summary>
-        /// Apply PBox: read only from sBoxResult
-        /// </summary>
-        /// <param name="container"></param>
-        private void DoPbox(ref DataContainer container)
-        {
-            container.L_.FullUint = 0xFF000000; // clear lowest 24 bit // why not 20? should not matter...
-            uint tmp = 0x00000001; // and set bits from 1C-1E (result from F)
+            uint tmp = 0x00000001;
             for (var i = 0; i < 20; i++)
             {
-                if ((container.sBoxResult.FullUint & pBoxTable[i]) != 0)
+                if ((sBoxResult.FullUint & pBoxTable[i]) != 0)
                 {
                     // Set this bit (RTL)
-                    container.L_.FullUint |= tmp;
+                    r.FullUint |= tmp;
                 }
 
                 tmp <<= 1;
             }
+
+            return r;
         }
 
         /// <summary>
@@ -446,7 +431,7 @@ namespace MeteoSolution
                 ShiftTimeRight(round, ref container);
                 ExpandR(ref container);
                 // L' = CompressKey
-                CompressKey(ref container);
+                container.L_ = CompressKey(container.timeH, container.timeL);
 
                 // (expR XOR compr.Key)
                 // XOR expanded R (30 bytes) with compressed key (from time)
@@ -458,10 +443,10 @@ namespace MeteoSolution
                 container.R.Byte2 &= 0x0F; // clear 0D(4-7)
 
                 // Apply SBox to L' (Also reduces L' from 30 to 20 bit)
-                DoSbox(ref container);
+                container.sBoxResult = formattedSbox(container.L_);
 
                 // Apply PBox to L'
-                DoPbox(ref container);
+                container.L_ = Pbox(container.sBoxResult);
 
                 // L XOR P-Boxed Round-Key (L')
                 container.L_.FullUint ^= container.L.FullUint;
