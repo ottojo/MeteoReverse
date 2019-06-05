@@ -34,7 +34,7 @@ namespace MeteoSolution
         ///     Container zum schnellen Zusammenfassen und Trennen von Key und Cipher.
         /// </summary>
         [StructLayout(LayoutKind.Explicit)]
-        private unsafe struct CipherKeyContainer
+        public unsafe struct CipherKeyContainer
         {
             [FieldOffset(0)] public fixed byte AllBytes[10]; // = new Byte[10];
 
@@ -81,7 +81,7 @@ namespace MeteoSolution
         /// <summary>
         ///     Container, wich contains all former global vars
         /// </summary>
-        private struct DataContainer
+        public struct DataContainer
         {
             public ByteUInt L_;
             public ByteUInt L;
@@ -275,7 +275,7 @@ namespace MeteoSolution
         }
 
 
-        private unsafe void CopyTimeToByteUint(byte* data, byte* key, ref DataContainer container)
+        public static unsafe void CopyTimeToByteUint(byte* data, byte* key, ref DataContainer container)
         {
             for (var i = 0; i < 4; i++)
             {

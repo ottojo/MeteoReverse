@@ -33,7 +33,7 @@ namespace MeteoOriginal
         ///     Container zum schnellen Zusammenfassen und Trennen von Key und Cipher.
         /// </summary>
         [StructLayout(LayoutKind.Explicit)]
-        private unsafe struct CipherKeyContainer
+        public unsafe struct CipherKeyContainer
         {
             [FieldOffset(0)] public fixed byte AllBytes[10]; // = new Byte[10];
 
