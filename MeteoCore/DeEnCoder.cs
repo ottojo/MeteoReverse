@@ -314,6 +314,7 @@ namespace MeteoSolution
                 tmp = 0;
                 if ((container.timeL & 0x00100000) != 0) // save time bit 20 (first bit that should really belong to H)
                     tmp = 1;
+                container.timeL &= 0xFFEFFFFF;
                 if ((container.timeL & 1) != 0)
                     container.timeL |= 0x00100000; // copy time bit 0 to time bit 20
                 container.timeL >>= 1; // time >>= 1
