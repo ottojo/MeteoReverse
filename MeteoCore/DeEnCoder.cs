@@ -59,9 +59,9 @@ namespace MeteoSolution
         private static readonly uint[] timeCompression2 = Secrets.timeCompression2;
 
         /// <summary>
-        /// Lookup table for P-Box
+        /// Lookup table for P-Box without weird gap from bits 4 to 7
         /// </summary>
-        private static readonly uint[] pBoxTable = Secrets.pBoxTable;
+        public static readonly uint[] newpBoxTable = Secrets.PBoxTable;
 
         /// <summary>
         /// Substitution table for S-Box
@@ -86,11 +86,6 @@ namespace MeteoSolution
             public ByteUInt L_;
             public ByteUInt L;
             public ByteUInt R;
-
-            /// <summary>
-            /// Store SBox result (only used by PBox)
-            /// </summary>
-            public ByteUInt sBoxResult;
 
             public byte timeH;
             public uint timeL;
@@ -373,16 +368,16 @@ namespace MeteoSolution
             return L_;
         }
 
-        public static ByteUInt Pbox(ByteUInt sBoxResult)
+        public static uint Pbox(uint sBoxResult)
         {
-            ByteUInt r = new ByteUInt {FullUint = 0xFF000000};
+            uint r = 0xFF000000;
             uint tmp = 0x00000001;
             for (var i = 0; i < 20; i++)
             {
-                if ((sBoxResult.FullUint & pBoxTable[i]) != 0)
+                if ((sBoxResult & newpBoxTable[i]) != 0)
                 {
                     // Set this bit (RTL)
-                    r.FullUint |= tmp;
+                    r |= tmp;
                 }
 
                 tmp <<= 1;
@@ -422,10 +417,10 @@ namespace MeteoSolution
                 container.R.Byte2 &= 0x0F; // clear 0D(4-7)
 
                 // Apply SBox to L' (Also reduces L' from 30 to 20 bit)
-                container.sBoxResult = formattedSbox(container.L_);
+                // uint sBoxResult = 
 
                 // Apply PBox to L'
-                container.L_ = Pbox(container.sBoxResult);
+                container.L_.FullUint = Pbox(Sbox(build6bitGroups(container.L_.FullUint)));
 
                 // L XOR P-Boxed Round-Key (L')
                 container.L_.FullUint ^= container.L.FullUint;

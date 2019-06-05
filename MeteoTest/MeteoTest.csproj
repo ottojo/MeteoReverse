@@ -15,8 +15,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\MeteoCore\MeteoCore.csproj" />
-      <ProjectReference Include="..\MeteoOriginal\MeteoOriginal.csproj" />
+        <ProjectReference Include="..\MeteoCore\MeteoCore.csproj" />
+        <ProjectReference Include="..\MeteoOriginal\MeteoOriginal.csproj" />
     </ItemGroup>
 
 </Project>

@@ -60,7 +60,7 @@ namespace MeteoOriginal
         /// <summary>
         ///     12-14 from 1C-1E (result from F)
         /// </summary>
-        private static readonly uint[] mUintArrBitPattern20 = Secrets.pBoxTable;
+        private static readonly uint[] mUintArrBitPattern20 = Secrets.OldPboxTable;
 
         /// <summary>
         ///     bit pattern for 12-15 from 16-19 (1/3)

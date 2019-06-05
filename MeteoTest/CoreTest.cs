@@ -19,28 +19,6 @@ namespace MeteoTest
         }
 
         [TestMethod]
-        public void TestCoreSBox()
-        {
-            for (int i = 0; i < TestData.SBoxTestData.GetLength(0); i++)
-            {
-                DeEnCoder.ByteUInt input = new DeEnCoder.ByteUInt();
-                input.FullUint = TestData.SBoxTestData[i, 0];
-                Assert.AreEqual(DeEnCoder.formattedSbox(input).FullUint, TestData.SBoxTestData[i, 1]);
-            }
-        }
-
-        [TestMethod]
-        public void TestCorePBox()
-        {
-            for (int i = 0; i < TestData.PBoxTestData.GetLength(0); i++)
-            {
-                DeEnCoder.ByteUInt input = new DeEnCoder.ByteUInt();
-                input.FullUint = TestData.PBoxTestData[i, 0];
-                Assert.AreEqual(DeEnCoder.Pbox(input).FullUint, TestData.PBoxTestData[i, 1]);
-            }
-        }
-
-        [TestMethod]
         public unsafe void TestCoreCopyTimeToByteUint()
         {
             for (int i = 0; i < TestData.CopyTestData.GetLength(0); i++)
