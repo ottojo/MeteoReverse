@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using MeteoCore;
 
 namespace MeteoSolution
 {
@@ -43,64 +44,39 @@ namespace MeteoSolution
         }
 
         /// <summary>
-        ///     bit pattern for 0D,0E from 0B-0D
+        /// Lookup table to expand R
         /// </summary>
-        /// used for expanding R
-        private readonly uint[] expandRTable = new uint[12]
-        {
-        };
+        private static readonly uint[] expandRTable = Secrets.expandRTable;
 
         /// <summary>
-        ///     12-15 from 16-19 (time)
+        ///  Lookup table for key compression
         /// </summary>
-        private readonly uint[] timeCompression1 = new uint[30]
-        {
-
-
-
-        };
+        private static readonly uint[] timeCompression1 = Secrets.timeCompression1;
 
         /// <summary>
-        ///     bit pattern for 12-15 from 1A (time2)
+        ///  Lookup table for key compression
         /// </summary>
-        private readonly uint[] timeCompression2 = new uint[30]
-        {
-
-
-
-        };
+        private static readonly uint[] timeCompression2 = Secrets.timeCompression2;
 
         /// <summary>
-        ///     12-14 from 1C-1E (result from F)
-        ///     Why is this 24bit long? quartet 1 always 0 as expected
-        ///     (Due to output format of S-Box)
+        /// Lookup table for P-Box
         /// </summary>
-        private readonly uint[] pBoxTable = new uint[20]
-        {
-
-
-        };
+        private static readonly uint[] pBoxTable = Secrets.pBoxTable;
 
         /// <summary>
-        ///     bit pattern for 12-15 from 16-19 (1/3)
+        /// Substitution table for S-Box
         /// </summary>
-        private static readonly byte[] sTable1 =
-        {
-        };
+        private static readonly byte[] sTable1 = Secrets.sTable1;
 
         /// <summary>
-        ///     bit pattern for 12-15 from 16-19 (2/3)
+        /// Substitution table for S-Box
         /// </summary>
-        private static readonly byte[] sTable2 =
-        {
-        };
+        private static readonly byte[] sTable2 = Secrets.sTable2;
 
         /// <summary>
-        ///     bit pattern for 12-15 from 16-19 (3/3)
+        /// Substitution table for S-Box
         /// </summary>
-        private static readonly byte[] sTable3 =
-        {
-        };
+        private static readonly byte[] sTable3 = Secrets.sTable3;
 
         /// <summary>
         ///     Container, wich contains all former global vars
