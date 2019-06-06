@@ -83,7 +83,6 @@ namespace MeteoSolution
         /// </summary>
         public struct DataContainer
         {
-            public ByteUInt L_;
             public ByteUInt L;
             public ByteUInt R;
 
@@ -141,6 +140,13 @@ namespace MeteoSolution
                 }
             }
 
+            Console.Write("Decoding {");
+            for (int i = 0; i < dataCiperKey.Length; i++)
+            {
+                Console.Write($"{dataCiperKey[i]}, ");
+            }
+
+            Console.WriteLine("}");
             meteoResult = DecodeDataset(dataCiperKey);
 
             char[] result = Convert.ToString(meteoResult, 2).PadLeft(24, '0').ToCharArray();
@@ -159,7 +165,6 @@ namespace MeteoSolution
         /// </summary>
         public static uint build6bitGroups(uint input)
         {
-            Console.WriteLine("S Box building 6-bit-blocks from input data.");
             uint output = 0;
             int lowIndex = 0;
             int highIndex = 20;
@@ -179,8 +184,6 @@ namespace MeteoSolution
                 }
             }
 
-            // char[] r = Convert.ToString(output, 2).PadLeft(30, '0').ToCharArray();
-            // Console.WriteLine("Done: " + new string(r));
             return output;
         }
 
@@ -210,36 +213,21 @@ namespace MeteoSolution
             // S1 (store at offset 0)
             output |= (uint) (sTable3[(groups6bit >> 24) & 0x3F] & 0xF);
 
-            return output;
-        }
+            Console.WriteLine($"Sbox({groups6bit})={output}");
 
-        /// <summary>
-        /// Applies the S-Box.
-        /// Result is strangely formatted, this is just for interoperability with existing code.
-        /// The goal is to eliminate this function.
-        /// </summary>
-        /// <param name="input"></param>
-        /// <returns>Result of S-Box with a gap in the Data from bits 4 to 7</returns>
-        public static ByteUInt formattedSbox(ByteUInt input)
-        {
-            uint g6 = build6bitGroups(input.FullUint);
-            uint s = Sbox(g6);
-            ByteUInt r = new ByteUInt();
-            r.FullUint = s;
-            r.FullUint <<= 4;
-            r.FullUint &= 0xFFFFFF0F;
-            r.FullUint |= s & 0xF;
-            return r;
+            return output;
         }
 
 
         /// <summary>
         ///     Ermittelt Wetterdaten aus den entschlüsselten Bytes und prüft auf Korrektheit.
         /// </summary>
-        /// <param name="PlainBytes">Array mit den entschlüsselte Bytes.</param>
+        /// <param name="PlainBytes">Array mit den entschlüsselte Bytes. (40bit, 5byte)</param>
         /// <returns>Gibt die aus dem Klartextbytes ermittelten Wetterdaten zurück</returns>
-        private uint GetMeteoFromPlain(byte[] PlainBytes)
+        public static uint GetMeteoFromPlain(byte[] PlainBytes)
         {
+            // if R = 0x01234, L = 0x56789,
+            // the input will be [0x89 0x67 0x45 0x23 0x01]
             uint result;
             uint checkSum;
             checkSum = PlainBytes[2] & 0x0Fu;
@@ -248,7 +236,7 @@ namespace MeteoSolution
             checkSum <<= 4;
             checkSum |= (uint) (PlainBytes[0] >> 4);
 
-            result = (PlainBytes[0] & 0x0Fu) | 0x10u;
+            result = (PlainBytes[0] & 0xFu) | 0b10000u;
             result <<= 8;
             result |= PlainBytes[4];
             result <<= 8;
@@ -262,8 +250,9 @@ namespace MeteoSolution
             }
             else
             {
-                result &= 0x3FFFFF;
-                result |= 0x400000;
+                result &= 0x3FFFFF; // truncate to 22bit
+                result |=
+                    0b10000000000000000000000; // set bit 22 -> will be ...10 after reversing to signal good conversion
             }
 
             return result;
@@ -329,16 +318,10 @@ namespace MeteoSolution
         {
             uint tmp;
 
-            // Use only lower 20 bit (clear previous expansion?)
-            R.FullUint &= 0x000FFFFF; // clear 0D(4-7),0E
-
             // Set bits right to left, starting here:
             tmp = 0x00100000; // and set bits form 0B-0D(0-3)
-            for (var i = 0; i < 12; i++)
+            for (var i = 0; i < 10; i++)
             {
-                // last 2 elements in array are 0?
-                // -> makes sense, need 10 new bits to expand from 20 to 30
-                // why iteration until 12 and not 10?
                 if ((R.FullUint & expandRTable[i]) != 0)
                     R.FullUint |= tmp;
                 tmp <<= 1;
@@ -370,7 +353,7 @@ namespace MeteoSolution
 
         public static uint Pbox(uint sBoxResult)
         {
-            uint r = 0xFF000000;
+            uint r = 0;
             uint tmp = 0x00000001;
             for (var i = 0; i < 20; i++)
             {
@@ -402,46 +385,59 @@ namespace MeteoSolution
             // OUTER LOOP 1 (16 Rounds)
             for (var round = 16; round > 0; round--)
             {
+                Console.WriteLine($"Round {round}: L={container.L.FullUint:X}, R={container.R.FullUint:X}");
+                Console.WriteLine($"timeH=0x{container.timeH:x}, timeL=0x{container.timeL:x}");
+
                 ShiftTimeRight(round, ref container);
-                container.R = ExpandR(container.R);
-                // L' = CompressKey
-                container.L_ = CompressKey(container.timeH, container.timeL);
 
-                // (expR XOR compr.Key)
-                // XOR expanded R (30 bytes) with compressed key (from time)
-                // L' = L' XOR R_Expanded
-                container.L_.FullUint ^= container.R.FullUint; // 12-15 XOR 0B-0E
+                Console.WriteLine($"Rotated Time. timeH=0x{container.timeH:x}, timeL=0x{container.timeL:x}");
+
+                ByteUInt compressedKey = CompressKey(container.timeH, container.timeL);
+                Console.WriteLine($"Compressed key: 0x{compressedKey.FullUint:x}");
 
 
-                // reset 4 lowest bits of R expansion
-                container.R.Byte2 &= 0x0F; // clear 0D(4-7)
+                uint expandedR = ExpandR(container.R).FullUint;
+                Console.WriteLine($"Expanded R: 0x{expandedR:x}");
 
-                // Apply SBox to L' (Also reduces L' from 30 to 20 bit)
-                // uint sBoxResult = 
+                uint sboxInput = compressedKey.FullUint ^ expandedR;
 
-                // Apply PBox to L'
-                container.L_.FullUint = Pbox(Sbox(build6bitGroups(container.L_.FullUint)));
 
-                // L XOR P-Boxed Round-Key (L')
-                container.L_.FullUint ^= container.L.FullUint;
+                uint bit6Group = build6bitGroups(sboxInput);
+                Console.WriteLine($"Built 6bit groups: {bit6Group:x}");
+
+                uint sboxresult = Sbox(bit6Group);
+                Console.WriteLine($"S Box result: {sboxresult:x}");
+
+
+                uint pboxResult = Pbox(sboxresult);
+                Console.WriteLine($"Applied f: {pboxResult:x}");
+
+                pboxResult ^= container.L.FullUint;
 
                 // L = R
-                container.L.FullUint = container.R.FullUint & 0x00FFFFFF;
+                container.L.FullUint = container.R.FullUint;
 
                 // R = L'
-                container.R.FullUint = container.L_.FullUint & 0x00FFFFFF;
-            } // end of outer loop 1
+                container.R.FullUint = pboxResult;
+            }
 
+            Console.WriteLine($"Decrypted R = {container.R.FullUint}, L = {container.L.FullUint}");
+
+            // 4 bits from R get moved to L
             container.R.FullUint <<= 4;
             container.L.Byte2 &= 0x0F;
             container.L.Byte2 |= (byte) (container.R.Byte0 & 0xF0);
 
-            //R0B0C0D0E.byte.R0D |= (R08090A.byte.R08 & 0xF0);
             plain[0] = container.L.Byte0;
             plain[1] = container.L.Byte1;
             plain[2] = container.L.Byte2;
             plain[3] = container.R.Byte1;
             plain[4] = container.R.Byte2;
+
+            for (int i = 0; i < 5; i++)
+            {
+                Console.WriteLine($"plain[{i}] = 0x{plain[i]:X}");
+            }
 
             return plain;
         }

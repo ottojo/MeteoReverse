@@ -263,7 +263,7 @@ namespace MeteoOriginal
 
             R.FullUint &= 0x000FFFFF; // clear 0D(4-7),0E
             tmp = 0x00100000; // and set bits form 0B-0D(0-3)
-            for (var i = 0; i < 12; i++)
+            for (var i = 0; i < 10; i++)
             {
                 if ((R.FullUint & mUintArrBitPattern12[i]) != 0)
                     R.FullUint |= tmp;

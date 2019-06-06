@@ -1,4 +1,5 @@
-﻿using MeteoSolution;
+﻿using System;
+using MeteoSolution;
 
 namespace MeteoCore
 {
@@ -6,8 +7,8 @@ namespace MeteoCore
     {
         static void Main(string[] args)
         {
-            new DeEnCoder().DecodeDataset(
-                "0111011011010111001001100101001111000001010100000000000000110000000110010010011000");
+            Console.WriteLine(new DeEnCoder().DecodeDataset(
+                "0111011011010111001001100101001111000001010100000000000000110000000110010010011000"));
         }
     }
 }
